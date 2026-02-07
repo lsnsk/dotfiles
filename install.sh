@@ -148,16 +148,15 @@ fi
 
 # --- Установка плагинов ---
 yellow "Устанавливаю tmux-плагины..."
-INSTALL_OUTPUT=$(TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1)
+INSTALL_OUTPUT=$(TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1 || true)
 FAILED=$(echo "$INSTALL_OUTPUT" | grep -c "download fail" || true)
 
 echo "$INSTALL_OUTPUT" | while read -r line; do
-    echo "  $line"
+    [[ -n "$line" ]] && echo "  $line"
 done
 
 if [[ "$FAILED" -gt 0 ]]; then
     yellow "Не удалось установить $FAILED плагинов. Пробую очистить и переустановить..."
-    # Удаляем все проблемные и ставим заново
     for plugin_dir in "$HOME/.tmux/plugins"/*/; do
         plugin_name=$(basename "$plugin_dir")
         [[ "$plugin_name" == "tpm" ]] && continue
@@ -166,8 +165,8 @@ if [[ "$FAILED" -gt 0 ]]; then
         fi
     done
     TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1 | while read -r line; do
-        echo "  $line"
-    done
+        [[ -n "$line" ]] && echo "  $line"
+    done || true
 fi
 green "Плагины установлены"
 
