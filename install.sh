@@ -149,7 +149,8 @@ fi
 # --- Установка плагинов ---
 yellow "Устанавливаю tmux-плагины..."
 INSTALL_OUTPUT=$(TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1 || true)
-FAILED=$(echo "$INSTALL_OUTPUT" | grep -c "download fail" || true)
+# "tpm" download fail — всегда ложное срабатывание (TPM не может клонировать себя в свою же директорию)
+FAILED=$(echo "$INSTALL_OUTPUT" | grep "download fail" | grep -vc '"tpm"' || true)
 
 echo "$INSTALL_OUTPUT" | while read -r line; do
     [[ -n "$line" ]] && echo "  $line"
