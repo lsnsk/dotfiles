@@ -126,11 +126,49 @@ else
     green "TPM уже установлен"
 fi
 
+# --- Очистка битых плагинов ---
+# TPM не может переустановить плагин, если директория существует но git-репо внутри битое.
+# Проверяем каждый плагин и удаляем сломанные.
+if [[ -d "$HOME/.tmux/plugins" ]]; then
+    CLEANED=0
+    for plugin_dir in "$HOME/.tmux/plugins"/*/; do
+        plugin_name=$(basename "$plugin_dir")
+        [[ "$plugin_name" == "tpm" ]] && continue  # TPM не трогаем
+        # Проверяем что git-репозиторий внутри валидный
+        if [[ -d "$plugin_dir" ]] && ! git -C "$plugin_dir" rev-parse --git-dir &>/dev/null; then
+            yellow "  Битый плагин: $plugin_name — удаляю для переустановки"
+            rm -rf "$plugin_dir"
+            ((CLEANED++)) || true
+        fi
+    done
+    if [[ "$CLEANED" -gt 0 ]]; then
+        yellow "Очищено $CLEANED битых плагинов"
+    fi
+fi
+
 # --- Установка плагинов ---
 yellow "Устанавливаю tmux-плагины..."
-TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1 | while read -r line; do
+INSTALL_OUTPUT=$(TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1)
+FAILED=$(echo "$INSTALL_OUTPUT" | grep -c "download fail" || true)
+
+echo "$INSTALL_OUTPUT" | while read -r line; do
     echo "  $line"
 done
+
+if [[ "$FAILED" -gt 0 ]]; then
+    yellow "Не удалось установить $FAILED плагинов. Пробую очистить и переустановить..."
+    # Удаляем все проблемные и ставим заново
+    for plugin_dir in "$HOME/.tmux/plugins"/*/; do
+        plugin_name=$(basename "$plugin_dir")
+        [[ "$plugin_name" == "tpm" ]] && continue
+        if ! git -C "$plugin_dir" rev-parse --git-dir &>/dev/null; then
+            rm -rf "$plugin_dir"
+        fi
+    done
+    TMUX='' "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>&1 | while read -r line; do
+        echo "  $line"
+    done
+fi
 green "Плагины установлены"
 
 # --- Итог ---
