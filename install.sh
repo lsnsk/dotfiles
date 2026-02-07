@@ -16,6 +16,39 @@ green()  { printf '\033[0;32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[0;33m%s\033[0m\n' "$*"; }
 red()    { printf '\033[0;31m%s\033[0m\n' "$*"; }
 
+# --- Проверка локалей (нужна до apt-get, иначе perl/dpkg ругаются) ---
+NEED_LOCALE_GEN=false
+if ! locale -a 2>/dev/null | grep -qi 'en_US\.utf-\?8'; then
+    yellow "Локаль en_US.UTF-8 не найдена"
+    NEED_LOCALE_GEN=true
+fi
+if ! locale -a 2>/dev/null | grep -qi 'ru_RU\.utf-\?8'; then
+    yellow "Локаль ru_RU.UTF-8 не найдена"
+    NEED_LOCALE_GEN=true
+fi
+
+if [[ "$NEED_LOCALE_GEN" == true ]]; then
+    yellow "Генерирую недостающие локали..."
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update -qq && sudo apt-get install -y -qq locales
+        sudo sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+        sudo sed -i 's/^# *ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
+        sudo locale-gen
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y glibc-langpack-en glibc-langpack-ru
+    elif command -v pacman &>/dev/null; then
+        sudo sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+        sudo sed -i 's/^#ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen
+        sudo locale-gen
+    fi
+    sudo update-locale LANG=en_US.UTF-8 LANGUAGE="en_US:en:ru_RU:ru" 2>/dev/null || true
+    export LANG=en_US.UTF-8
+    export LANGUAGE=en_US:en:ru_RU:ru
+    green "Локали en_US.UTF-8 + ru_RU.UTF-8 установлены"
+else
+    green "Локали en_US.UTF-8 + ru_RU.UTF-8 найдены"
+fi
+
 # --- Проверка tmux ---
 if ! command -v tmux &>/dev/null; then
     yellow "tmux не найден. Устанавливаю..."

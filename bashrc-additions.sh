@@ -20,6 +20,7 @@ fi
 
 # --- LOCALE ---
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en:ru_RU:ru
 
 # --- PAGER / EDITOR ---
 export PAGER='less -R'
